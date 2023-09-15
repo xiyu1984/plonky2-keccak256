@@ -28,6 +28,18 @@ pub struct HashInputTarget {
     pub blocks: Vec<BoolTarget>,
 }
 
+pub trait RegisterHashInputPublicTarget<F: RichField + Extendable<D>, const D: usize> {
+    fn register_public_target_hash_input(&self, builder: &mut CircuitBuilder<F, D>);
+}
+
+impl <F: RichField + Extendable<D>, const D: usize> RegisterHashInputPublicTarget<F, D> for HashInputTarget {
+    fn register_public_target_hash_input(&self, builder: &mut CircuitBuilder<F, D>) {
+        for i in 0..self.input.limbs.len() {
+            builder.register_public_input(self.input.get_limb(i).0);
+        }
+    }
+}
+
 pub type HashOutputTarget = BigUintTarget;
 
 fn read_u32_be_at(array: &[u8], index: usize) -> u32 {

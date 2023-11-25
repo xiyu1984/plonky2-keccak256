@@ -171,10 +171,10 @@ impl<F: RichField + Extendable<D>, const D: usize> CircuitBuilderHash<F, D>
 
         for i in provided_input.num_limbs()..gadget_input.input.num_limbs() {
             if i == provided_input.num_limbs() {
-                let num = self.constant_u32(128);
+                let num = self.constant_u32(1);
                 self.connect_u32(gadget_input.input.get_limb(i), num);
             } else if i == (gadget_input.input.num_limbs() - 1) {
-                let num = self.constant_u32(1);
+                let num = self.constant_u32(1 << 31);
                 self.connect_u32(gadget_input.input.get_limb(i), num);
             } else {
                 let zero = self.constant_u32(0);

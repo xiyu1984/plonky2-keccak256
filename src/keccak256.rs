@@ -25,11 +25,14 @@ impl<T: Witness<F>, F: PrimeField64> WitnessHashKeccak<F> for T {
         let num_actual_blocks = 1 + input_len_bits / KECCAK256_R;
         let padded_len_bits = num_actual_blocks * KECCAK256_R;
 
+        // println!("input biguint: {:?}", value);
+
         // bit right after the end of the message
         input_biguint.set_bit(input_len_bits as u64, true);
 
         // last bit of the last block
         input_biguint.set_bit(padded_len_bits as u64 - 1, true);
+        // println!("input biguint: {:?}", input_biguint.to_bytes_le());
 
         self.set_hash_input_le_target(target, &input_biguint);
         self.set_hash_blocks_target(target, num_actual_blocks);

@@ -163,22 +163,51 @@ impl<F: RichField + Extendable<D>, const D: usize> CircuitBuilderHash<F, D>
         &mut self,
         gadget_input: &HashInputTarget,
         provided_input: &BigUintTarget,
-        gadget_offset: usize,
+        reminder_bytes_len: usize,
     ) {
-        for (i, &limb) in provided_input.limbs.iter().enumerate() {
-            self.connect_u32(gadget_input.input.limbs[gadget_offset + i], limb);
-        }
+        assert!(reminder_bytes_len < 4, "invalid reminder bytes length: {reminder_bytes_len}");
+        assert!(provided_input.num_limbs() < gadget_input.input.num_limbs());
 
-        for i in provided_input.num_limbs()..gadget_input.input.num_limbs() {
-            if i == provided_input.num_limbs() {
-                let num = self.constant_u32(1);
-                self.connect_u32(gadget_input.input.get_limb(i), num);
-            } else if i == (gadget_input.input.num_limbs() - 1) {
-                let num = self.constant_u32(1 << 31);
-                self.connect_u32(gadget_input.input.get_limb(i), num);
-            } else {
-                let zero = self.constant_u32(0);
-                self.connect_u32(gadget_input.input.get_limb(i), zero);
+        if reminder_bytes_len == 0 {
+            for (i, &limb) in provided_input.limbs.iter().enumerate() {
+                self.connect_u32(gadget_input.input.limbs[i], limb);
+            }
+
+            for i in provided_input.num_limbs()..gadget_input.input.num_limbs() {
+                if i == provided_input.num_limbs() {
+                    let num = self.constant_u32(1);
+                    self.connect_u32(gadget_input.input.get_limb(i), num);
+                } else if i == (gadget_input.input.num_limbs() - 1) {
+                    let num = self.constant_u32(1 << 31);
+                    self.connect_u32(gadget_input.input.get_limb(i), num);
+                } else {
+                    let zero = self.constant_u32(0);
+                    self.connect_u32(gadget_input.input.get_limb(i), zero);
+                }
+            }
+        } else {
+            // connect from the beginning to the last full u32
+            provided_input.limbs[..provided_input.num_limbs() - 1].iter().enumerate().for_each(|(i, limb)| {
+                self.connect_u32(gadget_input.input.limbs[i], *limb);
+            });
+
+            // reminder
+            let supplyed_u32_t = provided_input.get_limb(provided_input.num_limbs() - 1);
+            let to_supply_u32_t = self.constant_u32(1 << (reminder_bytes_len *  8));
+            let (supplyed_u32_t, high_t) = self.add_u32(supplyed_u32_t, to_supply_u32_t);
+            let u32_zero = self.constant_u32(0);
+            self.connect_u32(high_t, u32_zero);
+            self.connect_u32(supplyed_u32_t, gadget_input.input.get_limb(provided_input.num_limbs() - 1));
+
+            // last bytes in `gadget_input`
+            for i in provided_input.num_limbs()..gadget_input.input.num_limbs() {
+                if i == (gadget_input.input.num_limbs() - 1) {
+                    let num = self.constant_u32(1 << 31);
+                    self.connect_u32(gadget_input.input.get_limb(i), num);
+                } else {
+                    let zero = self.constant_u32(0);
+                    self.connect_u32(gadget_input.input.get_limb(i), zero);
+                }
             }
         }
     }
